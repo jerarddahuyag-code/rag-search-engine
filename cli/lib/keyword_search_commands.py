@@ -2,6 +2,14 @@ import string
 
 from .utils import DEFAULT_SEARCH_LIMIT,load_movies, load_stop_words
 from nltk.stem import PorterStemmer
+from .inverted_index import InvertedIndex
+
+def build() -> None:
+        index = InvertedIndex()
+        index.build()
+        index.save()
+        docs = index.get_documents("Merida")
+        print(f"First document for token 'merida' = {docs[0]}")
 
 def search(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict]:
     matchedMovies = []
