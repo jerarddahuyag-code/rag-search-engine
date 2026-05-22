@@ -1,8 +1,37 @@
+from collections import defaultdict
 import string
+import os
+import pickle
 
-from .utils import DEFAULT_SEARCH_LIMIT,load_movies, load_stop_words
+from .utils import DEFAULT_SEARCH_LIMIT, CACHE_DIRECTORY, load_movies, load_stop_words
 from nltk.stem import PorterStemmer
-from .inverted_index import InvertedIndex
+
+class InvertedIndex:
+    def __init__(self) -> None:
+        self.index = defaultdict()
+        self.docmap: dict[int, dict] = {}
+        self.index_path = os.path.join(CACHE_DIRECTORY, "index.pkl")
+        self.docmap_path = os.path.join(CACHE_DIRECTORY, "docmap.pkl")
+    def __add_document(self, doc_id, text) -> None:
+        tokens = tokenize(text)
+        for word in tokens:
+            if word not in self.index:
+                self.index[word] = []
+            if doc_id not in self.index[word]:
+                self.index[word].append(doc_id)
+    def get_documents(self, term) -> list[int]:
+        return sorted(self.index[term])
+    def build(self) -> None:
+        movies = load_movies()
+        for movie in movies:
+            self.__add_document(movie['id'], f"{movie['title']} {movie['description']}")
+            self.docmap[movie['id']] = movie
+    def save(self) -> None:
+        os.makedirs("cache", exist_ok=True)
+        with open(self.index_path, "wb") as file:
+            pickle.dump(self.index, file)
+        with open(self.docmap_path, "wb") as file:
+            pickle.dump(self.docmap, file)
 
 def build() -> None:
         index = InvertedIndex()

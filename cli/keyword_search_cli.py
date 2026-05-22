@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-from cli.lib.keyword_search_commands import search, build
+from lib.keyword_search_commands import search, build
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Keyword Search CLI")
@@ -10,7 +10,7 @@ def main() -> None:
     search_parser = subparsers.add_parser("search", help="Search movies using BM25")
     search_parser.add_argument("query", type=str, help="Search query")
 
-    build_parser = subparsers.add_parser("build", help="Builds the inverted index for the movies")
+    subparsers.add_parser("build", help="Builds the inverted index for the movies")
 
     args = parser.parse_args()
 
