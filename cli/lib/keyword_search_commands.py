@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import Counter, defaultdict
 import string
 import os
 import pickle
@@ -10,15 +10,20 @@ class InvertedIndex:
     def __init__(self) -> None:
         self.index = defaultdict(set)
         self.docmap: dict[int, dict] = {}
+        self.term_frequencies: dict[int, Counter] = {}
         self.index_path = os.path.join(CACHE_DIRECTORY, "index.pkl")
         self.docmap_path = os.path.join(CACHE_DIRECTORY, "docmap.pkl")
-    def __add_document(self, doc_id, text) -> None:
+        self.term_frequencies_path = os.path.join(CACHE_DIRECTORY, "term_frequencies.pkl")
+    def __add_document(self, doc_id: int, text: str) -> None:
         tokens = preprocess(text)
+        self.term_frequencies[doc_id] = Counter(tokens)
         for token in set(tokens):
             self.index[token].add(doc_id)
-    def get_documents(self, term) -> list[int]:
+    def get_documents(self, term: str) -> list[int]:
         doc_ids = self.index.get(term, set())
         return sorted(list(doc_ids))
+    def get_tf(self, doc_id: int, term: str) -> int:
+        return self.term_frequencies[doc_id][term]
     def build(self) -> None:
         movies = load_movies()
         for movie in movies:
@@ -30,6 +35,8 @@ class InvertedIndex:
             pickle.dump(self.index, file)
         with open(self.docmap_path, "wb") as file:
             pickle.dump(self.docmap, file)
+        with open(self.term_frequencies_path, "wb") as file:
+            pickle.dump(self.term_frequencies, file)
     def load(self) -> None:
         if not os.path.exists(self.index_path) or not os.path.exists(self.docmap_path):
             raise OSError("Index file does not exist")
@@ -37,14 +44,21 @@ class InvertedIndex:
             self.index = pickle.load(file)
         with open(self.docmap_path, "rb") as file:
             self.docmap = pickle.load(file)
+        with open(self.term_frequencies_path, "rb") as file:
+            self.term_frequencies = pickle.load(file)
+
+def tf(doc_id: int, term: str) -> int:
+    validate_token_size(term)
+    idx = InvertedIndex()
+    idx.load()
+    return idx.get_tf(doc_id, term)
 
 def build() -> None:
-        index = InvertedIndex()
-        index.build()
-        index.save()
+    index = InvertedIndex()
+    index.build()
+    index.save()
 
 def search(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict]:
-    matchedMovies = []
     try:
         idx = InvertedIndex()
         idx.load()
@@ -99,3 +113,10 @@ def stemTokens(tokens: list[str]) -> list[str]:
     for token in tokens:
         stemmedTokens.append(stemmer.stem(token))
     return stemmedTokens
+
+def validate_token_size(term: str):
+    result = preprocess(term)
+    if len(result) > 1:
+        raise ValueError("term is not a single token") 
+    else:
+        return result
