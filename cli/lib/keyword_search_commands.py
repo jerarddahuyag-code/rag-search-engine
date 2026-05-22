@@ -8,19 +8,17 @@ from nltk.stem import PorterStemmer
 
 class InvertedIndex:
     def __init__(self) -> None:
-        self.index = defaultdict()
+        self.index = defaultdict(set)
         self.docmap: dict[int, dict] = {}
         self.index_path = os.path.join(CACHE_DIRECTORY, "index.pkl")
         self.docmap_path = os.path.join(CACHE_DIRECTORY, "docmap.pkl")
     def __add_document(self, doc_id, text) -> None:
-        tokens = tokenize(text)
-        for word in tokens:
-            if word not in self.index:
-                self.index[word] = []
-            if doc_id not in self.index[word]:
-                self.index[word].append(doc_id)
+        tokens = preprocess(text)
+        for token in set(tokens):
+            self.index[token].add(doc_id)
     def get_documents(self, term) -> list[int]:
-        return sorted(self.index[term])
+        doc_ids = self.index.get(term, set())
+        return sorted(list(doc_ids))
     def build(self) -> None:
         movies = load_movies()
         for movie in movies:
@@ -32,30 +30,38 @@ class InvertedIndex:
             pickle.dump(self.index, file)
         with open(self.docmap_path, "wb") as file:
             pickle.dump(self.docmap, file)
+    def load(self) -> None:
+        if not os.path.exists(self.index_path) or not os.path.exists(self.docmap_path):
+            raise OSError("Index file does not exist")
+        with open(self.index_path, "rb") as file:
+            self.index = pickle.load(file)
+        with open(self.docmap_path, "rb") as file:
+            self.docmap = pickle.load(file)
 
 def build() -> None:
         index = InvertedIndex()
         index.build()
         index.save()
-        docs = index.get_documents("Merida")
-        print(f"First document for token 'merida' = {docs[0]}")
 
 def search(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict]:
     matchedMovies = []
-    movies = load_movies()
-    for movie in movies:
-        if match(preprocess(query), preprocess(movie['title'])):
-            matchedMovies.append(movie)
-        if len(matchedMovies) >= limit:
-            break
-    return matchedMovies
-
-def match(queryTokens: list[str], movieTokens: list[str]) -> bool:
-    for token in queryTokens:
-        for mov_token in movieTokens:
-            if token in mov_token:
-                return True
-    return False
+    try:
+        idx = InvertedIndex()
+        idx.load()
+        query_tokens = preprocess(query)
+        seen, results = set(), []
+        for query_token in query_tokens:
+            matching_doc_ids = idx.get_documents(query_token)
+            for doc_id in matching_doc_ids:
+                if doc_id in seen:
+                    continue
+                seen.add(doc_id)
+                doc = idx.docmap[doc_id]
+                results.append(doc)
+                if len(results) >= limit:
+                    return results
+    except OSError as e:
+        print(e)
 
 def preprocess(unprocessed:str) -> list[str]:
     no_punc = remove_punctuation(unprocessed).lower()
