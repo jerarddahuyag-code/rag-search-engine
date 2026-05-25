@@ -4,7 +4,13 @@ import string
 import os
 import pickle
 
-from .utils import DEFAULT_SEARCH_LIMIT, CACHE_DIRECTORY, STOP_WORDS_PATH, load_movies
+from .utils import (
+    DEFAULT_SEARCH_LIMIT, 
+    CACHE_DIRECTORY, 
+    STOP_WORDS_PATH, 
+    BM25_K1,
+    load_movies
+)
 from nltk.stem import PorterStemmer
 
 class InvertedIndex:
@@ -45,6 +51,11 @@ class InvertedIndex:
         term_missing_doc_count = total_doc_count - term_match_doc_count
         return math.log((term_missing_doc_count + 0.5)/(term_match_doc_count + 0.5) + 1)
    
+    def get_bm25_tf(self, doc_id: int, term: str, k1=BM25_K1) -> float:
+        tf = self.get_tf(doc_id, term)
+        bm25_tf = (tf * (k1 + 1))/ (tf + k1)
+        return bm25_tf
+
     def build(self) -> None:
         movies = load_movies()
         for movie in movies:
@@ -93,6 +104,12 @@ def bm25_idf_command(term: str) -> float:
     idx = InvertedIndex()
     idx.load()
     return idx.get_bm25_idf(validated_term)
+
+def bm25_tf_command(doc_id: int, term: str, k1=BM25_K1) -> float:
+    validated_term = validate_token_size(term)
+    idx = InvertedIndex
+    idx.load()
+    return idx.get_bm25_tf(doc_id, validated_term, k1)
 
 def build_command() -> None:
     index = InvertedIndex()
