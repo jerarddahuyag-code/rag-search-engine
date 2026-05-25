@@ -5,6 +5,7 @@ import os
 import pickle
 
 from .utils import (
+    BM25_B,
     DEFAULT_SEARCH_LIMIT, 
     CACHE_DIRECTORY, 
     STOP_WORDS_PATH, 
@@ -18,15 +19,26 @@ class InvertedIndex:
         self.index = defaultdict(set)
         self.docmap: dict[int, dict] = {}
         self.term_frequencies: dict[int, Counter] = {}
+        self.doc_lengths = defaultdict(int)
         self.index_path = os.path.join(CACHE_DIRECTORY, "index.pkl")
         self.docmap_path = os.path.join(CACHE_DIRECTORY, "docmap.pkl")
         self.term_frequencies_path = os.path.join(CACHE_DIRECTORY, "term_frequencies.pkl")
+        self.doc_lengths_path = os.path.join(CACHE_DIRECTORY, "doc_length.pkl")
 
     def __add_document(self, doc_id: int, text: str) -> None:
         tokens = preprocess(text)
+        self.doc_lengths[doc_id] = len(tokens)
         self.term_frequencies[doc_id] = Counter(tokens)
         for token in set(tokens):
             self.index[token].add(doc_id)
+
+    def __get_avg_doc_lenght(self) -> float:
+        if len(self.doc_lengths) == 0:
+            return 0.0
+        total = 0
+        for values in self.doc_lengths.values():
+            total += values
+        return total / len(self.doc_lengths)
 
     def get_documents(self, term: str) -> list[int]:
         doc_ids = self.index.get(term, set())
@@ -51,10 +63,29 @@ class InvertedIndex:
         term_missing_doc_count = total_doc_count - term_match_doc_count
         return math.log((term_missing_doc_count + 0.5)/(term_match_doc_count + 0.5) + 1)
    
-    def get_bm25_tf(self, doc_id: int, term: str, k1=BM25_K1) -> float:
+    def get_bm25_tf(self, doc_id: int, term: str, k1=BM25_K1, b=BM25_B) -> float:
         tf = self.get_tf(doc_id, term)
-        bm25_tf = (tf * (k1 + 1))/ (tf + k1)
+        length_norm = 1 - b + b * (self.doc_lengths[doc_id]/self.__get_avg_doc_lenght())
+        bm25_tf = (tf * (k1 + 1))/ (tf + k1 * length_norm)
         return bm25_tf
+
+    def get_bm25(self, doc_id: int, term: str) -> float:
+        tf = self.get_bm25_tf(doc_id, term)
+        idf = self.get_bm25_idf(term)
+        return tf * idf
+
+    def bm25_search(self, query: str, limit=DEFAULT_SEARCH_LIMIT) -> tuple[list[dict], dict]:
+        tokens = preprocess(query)
+        scores = defaultdict(float)
+        for doc_id in self.docmap.keys():
+            doc_score = 0
+            for token in tokens:
+                doc_score += self.get_bm25(doc_id, token)
+            scores[doc_id] = doc_score
+        sorted_scores = dict(sorted(scores.items(), key=lambda score: score[1], reverse=True)[:limit])
+        most_relevant = sorted_scores
+
+        return most_relevant, {i: self.docmap[i] for i in most_relevant.keys()}
 
     def build(self) -> None:
         movies = load_movies()
@@ -70,6 +101,8 @@ class InvertedIndex:
             pickle.dump(self.docmap, file)
         with open(self.term_frequencies_path, "wb") as file:
             pickle.dump(self.term_frequencies, file)
+        with open(self.doc_lengths_path, "wb") as file:
+            pickle.dump(self.doc_lengths, file)
   
     def load(self) -> None:
         if not os.path.exists(self.index_path) or not os.path.exists(self.docmap_path):
@@ -80,6 +113,8 @@ class InvertedIndex:
             self.docmap = pickle.load(file)
         with open(self.term_frequencies_path, "rb") as file:
             self.term_frequencies = pickle.load(file)
+        with open(self.doc_lengths_path, "rb") as file:
+            self.doc_lengths = pickle.load(file)
 
 def idf_command(term: str) -> float:
     validated_term = validate_token_size(term)
@@ -105,11 +140,16 @@ def bm25_idf_command(term: str) -> float:
     idx.load()
     return idx.get_bm25_idf(validated_term)
 
-def bm25_tf_command(doc_id: int, term: str, k1=BM25_K1) -> float:
+def bm25_tf_command(doc_id: int, term: str, k1=BM25_K1, b=BM25_B) -> float:
     validated_term = validate_token_size(term)
-    idx = InvertedIndex
+    idx = InvertedIndex()
     idx.load()
-    return idx.get_bm25_tf(doc_id, validated_term, k1)
+    return idx.get_bm25_tf(doc_id, validated_term, k1, b)
+
+def bm25_search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> tuple[list[dict], list[dict]]:
+    idx = InvertedIndex()
+    idx.load()
+    return idx.bm25_search(query, limit)
 
 def build_command() -> None:
     index = InvertedIndex()
