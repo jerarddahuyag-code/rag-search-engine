@@ -1,4 +1,5 @@
 from collections import Counter, defaultdict
+import math
 import string
 import os
 import pickle
@@ -24,6 +25,14 @@ class InvertedIndex:
         return sorted(list(doc_ids))
     def get_tf(self, doc_id: int, term: str) -> int:
         return self.term_frequencies[doc_id][term]
+    def get_idf(self, term: str) -> float:
+        total_doc_count = len(self.docmap)
+        term_match_doc_count = len(self.index[term])
+        return math.log(float(total_doc_count + 1) / float(term_match_doc_count + 1))
+    def get_tfidf(self, doc_id: int, term: str) -> float:
+        tf = self.get_tf(doc_id, term)
+        idf = self.get_idf(term)
+        return tf * idf
     def build(self) -> None:
         movies = load_movies()
         for movie in movies:
@@ -47,11 +56,23 @@ class InvertedIndex:
         with open(self.term_frequencies_path, "rb") as file:
             self.term_frequencies = pickle.load(file)
 
-def tf(doc_id: int, term: str) -> int:
-    validate_token_size(term)
+def idf(term: str) -> float:
+    validated_term = validate_token_size(term)
     idx = InvertedIndex()
     idx.load()
-    return idx.get_tf(doc_id, term)
+    return idx.get_idf(validated_term)
+
+def tf(doc_id: int, term: str) -> int:
+    validated_term = validate_token_size(term)
+    idx = InvertedIndex()
+    idx.load()
+    return idx.get_tf(doc_id, validated_term)
+
+def tf_idf(doc_id: int, term: str) -> float:
+    validated_term = validate_token_size(term)
+    idx = InvertedIndex()
+    idx.load()
+    return idx.get_tfidf(doc_id, validated_term)
 
 def build() -> None:
     index = InvertedIndex()
@@ -119,4 +140,4 @@ def validate_token_size(term: str):
     if len(result) > 1:
         raise ValueError("term is not a single token") 
     else:
-        return result
+        return result[0]
