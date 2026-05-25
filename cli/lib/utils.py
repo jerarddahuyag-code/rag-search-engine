@@ -12,8 +12,3 @@ def load_movies() -> list[dict]:
     with open(DATA_PATH, "r") as f:
         data = json.load(f)
     return data["movies"]
-
-def load_stop_words() -> list[str]:
-    with open(STOP_WORDS_PATH, "r") as f:
-        data = f.read().splitlines()
-    return data
