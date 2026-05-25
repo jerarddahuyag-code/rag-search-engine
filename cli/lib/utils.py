@@ -1,5 +1,6 @@
 import json
 import os
+from typing import TypedDict
 
 DEFAULT_SEARCH_LIMIT = 5
 
@@ -10,7 +11,16 @@ CACHE_DIRECTORY = os.path.join(PROJECT_ROOT, "cache")
 BM25_K1 = 1.5
 BM25_B = 0.75
 
-def load_movies() -> list[dict]:
+class Movie(TypedDict):
+    id: int
+    title: str
+    description: str
+
+class SearchResult(TypedDict):
+    movie: Movie
+    score: float
+    
+def load_movies() -> list[Movie]:
     with open(DATA_PATH, "r") as f:
         data = json.load(f)
     return data["movies"]

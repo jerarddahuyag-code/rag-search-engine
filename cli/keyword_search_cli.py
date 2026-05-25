@@ -54,8 +54,8 @@ def main() -> None:
         case "search":
             print(f"Searching for: {args.query}")
             movies = search_command(args.query)
-            for i, movie in enumerate(movies):
-                print(f"{i + 1}. {movie['title']}")
+            for i, title in enumerate(movies):
+                print(f"{i + 1}. {title['title']}")
             pass
         case "build":
             print("Building inverted index")
@@ -79,10 +79,10 @@ def main() -> None:
             bm25tf = bm25_tf_command(args.doc_id, args.term, args.k1, args.b)
             print(f"BM25 TF score of '{args.term}' in document '{args.doc_id}': {bm25tf:.2f}")
         case "bm25search":
-            scores, movies = bm25_search_command(args.query, args.limit)
-            for i, score in scores.items():
-                movie = movies[i]['title']
-                print(f"({i + 1}) {movie} - Score: {score:.2f}")
+            results = bm25_search_command(args.query, args.limit)
+            for i, r in enumerate(results):
+                title = r['movie']['title']
+                print(f"({i + 1}) {title} - Score: {r['score']:.2f}")
         case _:
             parser.print_help()
 

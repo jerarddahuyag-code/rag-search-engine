@@ -10,6 +10,8 @@ from .utils import (
     CACHE_DIRECTORY, 
     STOP_WORDS_PATH, 
     BM25_K1,
+    Movie,
+    SearchResult,
     load_movies
 )
 from nltk.stem import PorterStemmer
@@ -17,7 +19,7 @@ from nltk.stem import PorterStemmer
 class InvertedIndex:
     def __init__(self) -> None:
         self.index = defaultdict(set)
-        self.docmap: dict[int, dict] = {}
+        self.docmap: dict[int, Movie] = {}
         self.term_frequencies: dict[int, Counter] = {}
         self.doc_lengths = defaultdict(int)
         self.index_path = os.path.join(CACHE_DIRECTORY, "index.pkl")
@@ -74,18 +76,24 @@ class InvertedIndex:
         idf = self.get_bm25_idf(term)
         return tf * idf
 
-    def bm25_search(self, query: str, limit=DEFAULT_SEARCH_LIMIT) -> tuple[list[dict], dict]:
+    def bm25_search(self, query: str, limit=DEFAULT_SEARCH_LIMIT) -> list[SearchResult]:
         tokens = preprocess(query)
         scores = defaultdict(float)
-        for doc_id in self.docmap.keys():
+        for doc_id in self.docmap:
             doc_score = 0
             for token in tokens:
                 doc_score += self.get_bm25(doc_id, token)
             scores[doc_id] = doc_score
         sorted_scores = dict(sorted(scores.items(), key=lambda score: score[1], reverse=True)[:limit])
-        most_relevant = sorted_scores
 
-        return most_relevant, {i: self.docmap[i] for i in most_relevant.keys()}
+        results: list[SearchResult] = []
+        for id, score in sorted_scores.items():
+            doc = self.docmap[id]
+            results.append({
+                "movie": doc,
+                "score": score
+            })
+        return results
 
     def build(self) -> None:
         movies = load_movies()
@@ -146,7 +154,7 @@ def bm25_tf_command(doc_id: int, term: str, k1=BM25_K1, b=BM25_B) -> float:
     idx.load()
     return idx.get_bm25_tf(doc_id, validated_term, k1, b)
 
-def bm25_search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> tuple[list[dict], list[dict]]:
+def bm25_search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[SearchResult]:
     idx = InvertedIndex()
     idx.load()
     return idx.bm25_search(query, limit)
