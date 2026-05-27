@@ -2,6 +2,7 @@ from collections import defaultdict
 import os
 
 from lib.utils import (
+    DEFAULT_CHUNK_SIZE,
     DEFAULT_SEARCH_LIMIT,
     Movie,
     CACHE_DIRECTORY,
@@ -113,7 +114,17 @@ def search_command(query: str, limit: int=DEFAULT_SEARCH_LIMIT):
         movie = result['movie']
         print(f"{i + 1}. {movie['title']} ({result['score']})\n{movie['description']}")
 
-
-
-
-
+def chunk_command(text: str, size: int=DEFAULT_CHUNK_SIZE):
+    splits = text.split()
+    chunks: list[list[str]] = []
+    chunk: list[str] = []
+    for i, word in enumerate(splits):
+        if i % size == 0 and not(len(chunk) == 0):
+            chunks.append(chunk)
+            chunk = []
+        chunk.append(word)
+    if not(len(chunk) == 0):
+        chunks.append(chunk)
+    print(f"Chunking {len(text)} characters")
+    for i, c in enumerate(chunks):
+        print(f"{i + 1}. {" ".join(c)}")

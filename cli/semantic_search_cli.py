@@ -2,8 +2,9 @@
 
 import argparse
 
-from lib.utils import DEFAULT_SEARCH_LIMIT
+from lib.utils import DEFAULT_CHUNK_SIZE, DEFAULT_SEARCH_LIMIT
 from lib.semantic_search_commands import (
+    chunk_command,
     embed_query,
     search_command,
     verify_embeddings,
@@ -29,7 +30,10 @@ def main() -> None:
     semantic_search_parser.add_argument("query", type=str, help="Search query")
     semantic_search_parser.add_argument("--limit", type=int, nargs='?', default=DEFAULT_SEARCH_LIMIT, help="Limit of returned relevant documents")
     
-
+    chunk_parser = subparsers.add_parser("chunk", help="Chunk text into specified word size")
+    chunk_parser.add_argument("text", type=str, help="Text to chunk")
+    chunk_parser.add_argument("--chunk-size", type=int, nargs='?', default=DEFAULT_CHUNK_SIZE, help="Chunk size in words")
+    
     args = parser.parse_args()
 
     match args.command:
@@ -43,6 +47,8 @@ def main() -> None:
             embed_query(args.query)
         case "search":
             search_command(args.query, args.limit)
+        case "chunk":
+            chunk_command(args.text, args.chunk_size)
         case _:
             parser.print_help()
 
