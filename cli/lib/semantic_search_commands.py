@@ -1,9 +1,12 @@
 from collections import defaultdict
 import os
+import re
 
 from lib.utils import (
     DEFAULT_CHUNK_SIZE,
+    DEFAULT_CHUNK_OVERLAP,
     DEFAULT_SEARCH_LIMIT,
+    DEFAULT_SEMANTIC_CHUNK_SIZE,
     Movie,
     CACHE_DIRECTORY,
     SearchResult,
@@ -114,17 +117,40 @@ def search_command(query: str, limit: int=DEFAULT_SEARCH_LIMIT):
         movie = result['movie']
         print(f"{i + 1}. {movie['title']} ({result['score']})\n{movie['description']}")
 
-def chunk_command(text: str, size: int=DEFAULT_CHUNK_SIZE):
+def fixed_chunking(text: str, size: int=DEFAULT_CHUNK_SIZE, overlap: int=DEFAULT_CHUNK_OVERLAP) -> list[list[str]]:
     splits = text.split()
     chunks: list[list[str]] = []
     chunk: list[str] = []
-    for i, word in enumerate(splits):
-        if i % size == 0 and not(len(chunk) == 0):
+    for word in splits:
+        if len(chunk) == size and not(len(chunk) == 0):
             chunks.append(chunk)
-            chunk = []
+            chunk = chunk[max(0, len(chunk) - overlap):]
         chunk.append(word)
     if not(len(chunk) == 0):
         chunks.append(chunk)
+    return chunks
+
+def semantic_chunking(text: str, size: int=DEFAULT_SEMANTIC_CHUNK_SIZE, overlap: int=DEFAULT_CHUNK_OVERLAP) -> list[list[str]]:
+    splits = re.split(r"(?<=[.!?])\s+", text)
+    chunks: list[list[str]] = []
+    chunk: list[str] = []
+    for sen in splits:
+        if len(chunk) == size and not(len(chunk) == 0):
+            chunks.append(chunk)
+            chunk = chunk[max(0, len(chunk) - overlap):]
+        chunk.append(sen)
+    if not(len(chunk) == 0):
+        chunks.append(chunk)
+    return chunks
+
+def chunk_command(text: str, size: int=DEFAULT_CHUNK_SIZE, overlap: int=DEFAULT_CHUNK_OVERLAP):
+    chunks = fixed_chunking(text, size, overlap)
     print(f"Chunking {len(text)} characters")
+    for i, c in enumerate(chunks):
+        print(f"{i + 1}. {" ".join(c)}")
+
+def semantic_chunk_command(text: str, size: int=DEFAULT_SEMANTIC_CHUNK_SIZE, overlap: int=DEFAULT_CHUNK_OVERLAP):
+    chunks = semantic_chunking(text, size, overlap)
+    print(f"Semantically chunking {len(text)} characters")
     for i, c in enumerate(chunks):
         print(f"{i + 1}. {" ".join(c)}")
