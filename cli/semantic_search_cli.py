@@ -12,6 +12,8 @@ from lib.utils import (
 from lib.semantic_search_commands import (
     chunk_command,
     embed_query,
+    embed_semantic_chunk_command,
+    search_chunked_command,
     search_command,
     semantic_chunk_command,
     verify_embeddings,
@@ -28,7 +30,7 @@ def main() -> None:
     embedding_parser = subparsers.add_parser("embed_text", help="Prints the embedded version of input text")
     embedding_parser.add_argument("text", type=str, help="The text to embed")
    
-    subparsers.add_parser("verify_embeddings", help="Verifies and prints the cached embeddings")
+    subparsers.add_parser("verify_embeddings", help="Verifies and prints the cached embeddings.")
 
     query_embedding_parser = subparsers.add_parser("embed_query", help="Prints embedded version of input query")
     query_embedding_parser.add_argument("query", type=str, help="The query to embed")
@@ -47,6 +49,12 @@ def main() -> None:
     semantic_chunk_parser.add_argument("--max-chunk-size", type=int, nargs='?', default=DEFAULT_SEMANTIC_CHUNK_SIZE, help="Chunk size in sentences")
     semantic_chunk_parser.add_argument("--overlap", type=int, nargs='?', default=DEFAULT_CHUNK_OVERLAP, help="Number of sentences to share with adjacent chunks")
    
+    subparsers.add_parser("embed_chunks", help="Embeds semantic chunks. Either loads or builds the embeddings")
+
+    search_chunked_parser = subparsers.add_parser("search_chunked", help="Search movies using semantic search with chunked embeddings")
+    search_chunked_parser.add_argument("query", type=str, help="Search query")
+    search_chunked_parser.add_argument("--limit", type=int, nargs='?', default=DEFAULT_SEARCH_LIMIT, help="Limit of returned relevant documents")
+
     args = parser.parse_args()
 
     match args.command:
@@ -64,6 +72,10 @@ def main() -> None:
             chunk_command(args.text, args.chunk_size, args.overlap)
         case "semantic_chunk":
             semantic_chunk_command(args.text, args.max_chunk_size, args.overlap)
+        case "embed_chunks":
+            embed_semantic_chunk_command()
+        case "search_chunked":
+            search_chunked_command(args.query, args.limit)
         case _:
             parser.print_help()
 
