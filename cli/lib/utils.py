@@ -10,8 +10,9 @@ DEFAULT_CHUNK_OVERLAP = 1
 DEFAULT_SEMANTIC_CHUNK_SIZE = 4
 
 DEFAULT_ALPHA = 0.5
+DEFAULT_K = 60
 
-SCORE_PRECISION = 2
+SCORE_PRECISION = 4
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 DATA_PATH = os.path.join(PROJECT_ROOT, "data", "movies.json")

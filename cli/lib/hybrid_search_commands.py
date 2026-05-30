@@ -141,7 +141,7 @@ def rrf_search_command(query: str, k: int, limit: int = DEFAULT_SEARCH_LIMIT):
     results = hybrid_search.rrf_search(query, k, limit)
     for i, result in enumerate(results):
         print(f"{i + 1}. {result['movie']['title']}")
-        print(f"Hybrid Score: {result['hybrid_score']}")
+        print(f"RRF Score: {result['hybrid_score']}")
         print(f"BM25: {result['keyword_score']} Semantic: {result['semantic_score']}")
         print(f"{result['movie']['description']}")
 
