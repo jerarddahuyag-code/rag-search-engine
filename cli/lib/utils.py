@@ -9,6 +9,8 @@ DEFAULT_CHUNK_SIZE = 200
 DEFAULT_CHUNK_OVERLAP = 1
 DEFAULT_SEMANTIC_CHUNK_SIZE = 4
 
+DEFAULT_ALPHA = 0.5
+
 SCORE_PRECISION = 2
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -26,6 +28,12 @@ class Movie(TypedDict):
 class SearchResult(TypedDict):
     movie: Movie
     score: float
+
+class HybridSearchResult(TypedDict):
+    movie: Movie
+    keyword_score: float
+    semantic_score: float
+    hybrid_score: float
 
 class ChunkMetaData(TypedDict):
     movie_idx: int
@@ -51,4 +59,17 @@ def format_search_result(doc_id: int, title: str, document: str, score: float, m
     return {
         'movie': formatted_movie,
         'score': round(score, SCORE_PRECISION)
+    }
+
+def format_hybrid_search_result(doc_id: int, title: str, document: str, hybrid_score: float, bm25_score: float, semantic_score:float, metadata=None) -> HybridSearchResult:
+    formatted_movie: Movie = {
+        'id': doc_id,
+        'title': title,
+        'description': document[:100]
+    }
+    return {
+        'movie': formatted_movie,
+        'hybrid_score': round(hybrid_score, SCORE_PRECISION),
+        'keyword_score': round(bm25_score, SCORE_PRECISION),
+        'semantic_score': round(semantic_score, SCORE_PRECISION)
     }
