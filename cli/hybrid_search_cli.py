@@ -20,7 +20,7 @@ def main() -> None:
     rrf_search_parser.add_argument("--k", nargs="?", default=DEFAULT_K, type=float, help="The value that dictates how much more weight we give to higher vs lower ranked results")
     rrf_search_parser.add_argument("--limit", nargs="?", default=DEFAULT_SEARCH_LIMIT, type=int, help="Number of movies to return")
     rrf_search_parser.add_argument("--enhance", type=str, choices=["spell", "rewrite", "expand"], help="query enhancement method")
-    rrf_search_parser.add_argument("--rerank-method", type=str, choices=["individual"], help="Method to use for reranking search results")
+    rrf_search_parser.add_argument("--rerank-method", type=str, choices=["individual", "batch"], help="Method to use for reranking search results")
 
     args = parser.parse_args()
 

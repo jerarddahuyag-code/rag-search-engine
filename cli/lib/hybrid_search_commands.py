@@ -1,4 +1,5 @@
 import os
+from typing import Literal
 
 from lib.result_reranking import rerank_results
 from lib.query_enhancement import enhance_query
@@ -136,7 +137,11 @@ def weighted_search_command(query: str, alpha:float=DEFAULT_ALPHA, limit: int=DE
         print(f"BM25: {result['keyword_score']} Semantic: {result['semantic_score']}")
         print(f"{result['movie']['description']}")
 
-def rrf_search_command(query: str, k: int, enhance: str, rerank_method: str, limit: int = DEFAULT_SEARCH_LIMIT):
+def rrf_search_command(query: str, 
+                       k: int, 
+                       enhance: Literal["spell", "expand", "rewrite"] | None = None,
+                       rerank_method: Literal["individual", "batch", "cross_encoder"] | None = None, 
+                       limit: int = DEFAULT_SEARCH_LIMIT):
     movies = load_movies()
     hybrid_search = HybridSearch(movies)
     original_limit = limit
@@ -149,7 +154,7 @@ def rrf_search_command(query: str, k: int, enhance: str, rerank_method: str, lim
         limit = limit * 5
     results = hybrid_search.rrf_search(query, k, limit)
     if rerank_method:
-        results = rerank_results(results, original_query)[:original_limit]
+        results = rerank_results(results, original_query, rerank_method, original_limit)
     for i, result in enumerate(results):
         print(f"{i + 1}. {result['movie']['title']}")
         print(f"Re-rank score: {result['rerank_score']}")
