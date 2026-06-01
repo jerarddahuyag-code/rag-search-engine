@@ -146,6 +146,8 @@ def rrf_search_command(query: str,
     hybrid_search = HybridSearch(movies)
     original_limit = limit
     original_query = query
+    print("====================== Query Info ======================")
+    print(f"Query: {query}")
     if enhance:
         enhanced_query = enhance_query(query, method=enhance)
         print(f"Enhanced query ({enhance}): '{query}' -> '{enhanced_query}'\n")
@@ -153,14 +155,15 @@ def rrf_search_command(query: str,
     if rerank_method:
         limit = limit * 5
     results = hybrid_search.rrf_search(query, k, limit)
-    if rerank_method:
-        results = rerank_results(results, original_query, rerank_method, original_limit)
+    print("====================== Raw Results ======================")
     for i, result in enumerate(results):
         print(f"{i + 1}. {result['movie']['title']}")
-        print(f"Re-rank score ({rerank_method}): {result['rerank_score']}")
         print(f"RRF Score: {result['hybrid_score']}")
         print(f"BM25: {result['keyword_score']} Semantic: {result['semantic_score']}")
-        print(f"{result['movie']['description']}")
+            
+    if rerank_method:
+        results = rerank_results(results, original_query, rerank_method, original_limit)
+    return results
 
 def hybrid_score(
     bm25_score: float, semantic_score: float, alpha: float = 0.5
