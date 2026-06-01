@@ -1,6 +1,8 @@
 import os
 
-from lib.utils import DEFAULT_ALPHA, DEFAULT_SEARCH_LIMIT, HybridSearchResult, Movie, SearchResult, format_hybrid_search_result, format_search_result, load_movies
+from lib.result_reranking import rerank_results
+from lib.query_enhancement import enhance_query
+from lib.utils import DEFAULT_ALPHA, DEFAULT_SEARCH_LIMIT, HybridSearchResult, Movie, SearchResult, format_hybrid_search_result, format_search_result, get_rewrite_query_prompt, get_spell_check_prompt, load_movies
 
 from .keyword_search_commands import InvertedIndex
 from .semantic_search_commands import ChunkedSemanticSearch
@@ -8,13 +10,12 @@ from .semantic_search_commands import ChunkedSemanticSearch
 class HybridSearch:
     def __init__(self, documents: list[Movie]) -> None:
         self.documents = documents
-        self.semantic_search = ChunkedSemanticSearch()
-        self.semantic_search.load_or_create_chunk_embeddings(documents)
-
         self.idx = InvertedIndex()
         if not os.path.exists(self.idx.index_path):
             self.idx.build()
             self.idx.save()
+        self.semantic_search = ChunkedSemanticSearch()
+        self.semantic_search.load_or_create_chunk_embeddings(documents)
 
     def _bm25_search(self, query: str, limit: int) -> list[SearchResult]:
         self.idx.load()
@@ -135,12 +136,23 @@ def weighted_search_command(query: str, alpha:float=DEFAULT_ALPHA, limit: int=DE
         print(f"BM25: {result['keyword_score']} Semantic: {result['semantic_score']}")
         print(f"{result['movie']['description']}")
 
-def rrf_search_command(query: str, k: int, limit: int = DEFAULT_SEARCH_LIMIT):
+def rrf_search_command(query: str, k: int, enhance: str, rerank_method: str, limit: int = DEFAULT_SEARCH_LIMIT):
     movies = load_movies()
     hybrid_search = HybridSearch(movies)
+    original_limit = limit
+    original_query = query
+    if enhance:
+        enhanced_query = enhance_query(query, method=enhance)
+        print(f"Enhanced query ({enhance}): '{query}' -> '{enhanced_query}'\n")
+        query = enhanced_query
+    if rerank_method:
+        limit = limit * 5
     results = hybrid_search.rrf_search(query, k, limit)
+    if rerank_method:
+        results = rerank_results(results, original_query)[:original_limit]
     for i, result in enumerate(results):
         print(f"{i + 1}. {result['movie']['title']}")
+        print(f"Re-rank score: {result['rerank_score']}")
         print(f"RRF Score: {result['hybrid_score']}")
         print(f"BM25: {result['keyword_score']} Semantic: {result['semantic_score']}")
         print(f"{result['movie']['description']}")

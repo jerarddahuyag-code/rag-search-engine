@@ -200,7 +200,10 @@ def fixed_chunking(text: str, size: int=DEFAULT_CHUNK_SIZE, overlap: int=DEFAULT
     return chunks
 
 def semantic_chunking(text: str, size: int=DEFAULT_SEMANTIC_CHUNK_SIZE, overlap: int=DEFAULT_CHUNK_OVERLAP) -> list[str]:
-    splits = re.split(r"(?<=[.!?])\s+", text.strip())
+    text = text.strip()
+    if not text:
+        return []
+    splits = re.split(r"(?<=[.!?])\s+", text)
     chunks: list[str] = []
     chunk: list[str] = []
     for sen in splits:
@@ -211,7 +214,7 @@ def semantic_chunking(text: str, size: int=DEFAULT_SEMANTIC_CHUNK_SIZE, overlap:
         if not len(stripped_sentence) == 0:
             chunk.append(stripped_sentence)
     if not(len(chunk) == 0):
-        chunks.append(chunk)
+        chunks.append(" ".join(chunk))
     return chunks
 
 def chunk_command(text: str, size: int=DEFAULT_CHUNK_SIZE, overlap: int=DEFAULT_CHUNK_OVERLAP):
