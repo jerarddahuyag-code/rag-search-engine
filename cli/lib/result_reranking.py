@@ -6,6 +6,7 @@ from typing import Literal, Optional
 from lib.utils import DEFAULT_SEARCH_LIMIT
 from dotenv import load_dotenv
 from google import genai
+from sentence_transformers import CrossEncoder
 
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
@@ -58,6 +59,11 @@ def batch_rerank(results: list[dict], query):
     doc_ids = (response.text or "").strip().strip('"')
     return json.loads(doc_ids)
 
+def cross_encoding(pairs: list[str, str], query):
+    cross_encoder = CrossEncoder("cross-encoder/ms-marco-TinyBERT-L2-v2")
+    scores = cross_encoder.predict(pairs)
+    return scores
+
 def rerank_results(results: list[dict], 
                    query: str,
                    rerank_method: Literal["individual", "batch", "cross_encoder"] | None = None,
@@ -74,10 +80,19 @@ def rerank_results(results: list[dict],
             ranked_ids = batch_rerank(results, query)
             new_ranking = []
             for i, doc_id in enumerate(ranked_ids):
-                print(doc_id)
                 movie = next((mov for mov in results if mov["movie"]["id"] == doc_id),{})
                 movie['rerank_score'] = i + 1
                 new_ranking.append(movie)
             return new_ranking
+        case "cross_encoder":
+            pairs = []
+            for result in results:
+                doc = result.get("movie")
+                pairs.append([query, f"{doc.get('title', '')} - {doc.get('document', '')}"])
+            new_scores = cross_encoding(pairs, query)
+            for i, result in enumerate(results):
+                result['rerank_score'] = new_scores[i]
+            return sorted(results, key=lambda x: x['rerank_score'], reverse=True)[:limit]
+
     return results
 

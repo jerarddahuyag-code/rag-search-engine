@@ -157,7 +157,7 @@ def rrf_search_command(query: str,
         results = rerank_results(results, original_query, rerank_method, original_limit)
     for i, result in enumerate(results):
         print(f"{i + 1}. {result['movie']['title']}")
-        print(f"Re-rank score: {result['rerank_score']}")
+        print(f"Re-rank score ({rerank_method}): {result['rerank_score']}")
         print(f"RRF Score: {result['hybrid_score']}")
         print(f"BM25: {result['keyword_score']} Semantic: {result['semantic_score']}")
         print(f"{result['movie']['description']}")
