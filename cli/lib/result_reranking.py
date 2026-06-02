@@ -14,7 +14,8 @@ if not api_key:
     raise RuntimeError("GEMINI_API_KEY environment variable not set")
 
 client = genai.Client(api_key=api_key)
-model = "gemma-4-31b-it"
+# model = "gemma-4-31b-it"
+model = "gemini-3.1-flash-lite"
 
 def individual_rerank(result: dict, query):
     doc = result.get("movie")
@@ -59,7 +60,7 @@ def batch_rerank(results: list[dict], query):
     doc_ids = (response.text or "").strip().strip('"')
     return json.loads(doc_ids)
 
-def cross_encoding(pairs: list[str, str], query):
+def cross_encoding(pairs: list[str, str]):
     cross_encoder = CrossEncoder("cross-encoder/ms-marco-TinyBERT-L2-v2")
     scores = cross_encoder.predict(pairs)
     return scores
@@ -89,7 +90,7 @@ def rerank_results(results: list[dict],
             for result in results:
                 doc = result.get("movie")
                 pairs.append([query, f"{doc.get('title', '')} - {doc.get('document', '')}"])
-            new_scores = cross_encoding(pairs, query)
+            new_scores = cross_encoding(pairs)
             for i, result in enumerate(results):
                 result['rerank_score'] = new_scores[i]
             return sorted(results, key=lambda x: x['rerank_score'], reverse=True)[:limit]

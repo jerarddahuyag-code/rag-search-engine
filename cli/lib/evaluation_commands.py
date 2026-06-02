@@ -11,6 +11,7 @@ if not api_key:
 
 client = genai.Client(api_key=api_key)
 model = "gemma-4-31b-it"
+model = "gemini-3.1-flash-lite"
 
 def evaluate_results(query:str, results: list[dict], rerank_method: str) -> str:
     formatted_results = []

@@ -98,7 +98,7 @@ def format_hybrid_search_result(doc_id: int, title: str, document: str, hybrid_s
     formatted_movie: Movie = {
         'id': doc_id,
         'title': title,
-        'description': document[:100]
+        'description': document
     }
     return {
         'movie': formatted_movie,

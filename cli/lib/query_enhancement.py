@@ -3,6 +3,7 @@ from typing import Optional
 
 from dotenv import load_dotenv
 from google import genai
+from google.genai import types
 
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
@@ -10,8 +11,8 @@ if not api_key:
     raise RuntimeError("GEMINI_API_KEY environment variable not set")
 
 client = genai.Client(api_key=api_key)
-model = "gemma-4-31b-it"
-
+# model = "gemma-4-31b-it"
+model = "gemini-3.1-flash-lite"
 
 def spell_correct(query: str) -> str:
     prompt = f"""Fix any spelling errors in the user-provided movie search query below.
@@ -22,9 +23,7 @@ def spell_correct(query: str) -> str:
     User query: "{query}"
     """
 
-    response = client.models.generate_content(model=model, contents=prompt)
-    corrected = (response.text or "").strip().strip('"')
-    return corrected if corrected else query
+    return generate(model=model, query=query, prompt=prompt)
 
 
 def rewrite_query(query: str) -> str:
@@ -48,9 +47,7 @@ def rewrite_query(query: str) -> str:
     User query: "{query}"
     """
 
-    response = client.models.generate_content(model=model, contents=prompt)
-    rewritten = (response.text or "").strip().strip('"')
-    return rewritten if rewritten else query
+    return generate(model=model, query=query, prompt=prompt)
 
 def expand_query(query: str) -> str:
     prompt = f"""Expand the user-provided movie search query below with related terms.
@@ -65,9 +62,26 @@ def expand_query(query: str) -> str:
 
     User query: "{query}"
     """
-    response = client.models.generate_content(model=model, contents=prompt)
-    expanded = (response.text or "").strip().strip('"')
-    return expanded if expanded else query
+    return generate(model=model, query=query, prompt=prompt)
+
+def generate(model: str, query: str, prompt:str) -> str:
+    response = client.models.generate_content(
+        model=model, 
+        contents=prompt,
+        config=types.GenerateContentConfig(
+        safety_settings=[
+            types.SafetySetting(
+                category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                threshold=types.HarmBlockThreshold.BLOCK_NONE,
+            ),
+            types.SafetySetting(
+                category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                threshold=types.HarmBlockThreshold.BLOCK_NONE,
+            )
+        ]
+        ))
+    model_response = (response.text or "").strip().strip('"')
+    return model_response if model_response else query
 
 def enhance_query(query: str, method: Optional[str] = None) -> str:
     match method:
